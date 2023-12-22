@@ -1,0 +1,66 @@
+type Station = record { id : text; station : principal };
+type Ticket = record {
+  id : text;
+  destination : text;
+  seat_no : float64;
+  time : text;
+  traveller : Traveller;
+  boarding : text;
+  train_id : text;
+};
+type TicketPayload = record {
+  traveller_id : text;
+  destination : text;
+  time : text;
+  boarding : text;
+  train_id : text;
+};
+type Train = record {
+  id : text;
+  empty_seats : float64;
+  starting_point : text;
+  time : text;
+  stops : vec text;
+  capacity : float64;
+};
+type TrainPayload = record {
+  starting_point : text;
+  time : text;
+  stops : vec text;
+  capacity : float64;
+};
+type TrainSearchPayload = record {
+  destination : text;
+  starting_point : text;
+  time : text;
+};
+type TrainUpdatePayload = record {
+  id : text;
+  starting_point : text;
+  time : text;
+  stops : vec text;
+};
+type Traveller = record { id : text; name : text; phone : text };
+type TravellerPayload = record { name : text; phone : text };
+type _AzleResult = variant { Ok : Ticket; Err : text };
+type _AzleResult_1 = variant { Ok : Train; Err : text };
+type _AzleResult_2 = variant { Ok : Traveller; Err : text };
+type _AzleResult_3 = variant { Ok : vec Ticket; Err : text };
+type _AzleResult_4 = variant { Ok : vec Train; Err : text };
+type _AzleResult_5 = variant { Ok : vec Traveller; Err : text };
+type _AzleResult_6 = variant { Ok : Station; Err : text };
+service : () -> {
+  addTicket : (TicketPayload) -> (_AzleResult);
+  addTrain : (TrainPayload) -> (_AzleResult_1);
+  addTraveller : (TravellerPayload) -> (_AzleResult_2);
+  getTicketById : (text) -> (_AzleResult) query;
+  getTicketsPerTrain : (text) -> (_AzleResult_3) query;
+  getTicketsPerTraveller : (text) -> (_AzleResult_3) query;
+  getTrainById : (text) -> (_AzleResult_1) query;
+  getTrainsEmptySeats : () -> (_AzleResult_4) query;
+  getTravellerById : (text) -> (_AzleResult_2) query;
+  getTravellersPerTrain : (text) -> (_AzleResult_5) query;
+  initStation : (text) -> (_AzleResult_6);
+  searchTrain : (TrainSearchPayload) -> (_AzleResult_4) query;
+  updateTrain : (TrainUpdatePayload) -> (_AzleResult_1);
+}

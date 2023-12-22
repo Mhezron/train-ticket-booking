@@ -1,0 +1,12 @@
+{
+  "canisters": {
+    "train_ticket_booking": {
+      "type": "custom",
+      "root": "src",
+      "ts": "src/index.ts",
+      "candid": "src/index.did",
+      "build": "npx azle train_ticket_booking",
+      "wasm": ".azle/train_ticket_booking/train_ticket_booking.wasm.gz"
+    }
+  }
+}
