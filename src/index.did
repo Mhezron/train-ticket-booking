@@ -1,8 +1,7 @@
-type Station = record { id : text; station : principal };
 type Ticket = record {
   id : text;
   destination : text;
-  seat_no : float64;
+  seat_no : nat32;
   time : text;
   traveller : Traveller;
   boarding : text;
@@ -17,28 +16,22 @@ type TicketPayload = record {
 };
 type Train = record {
   id : text;
-  empty_seats : float64;
+  empty_seats : nat32;
   starting_point : text;
   time : text;
   stops : vec text;
-  capacity : float64;
+  capacity : nat32;
 };
 type TrainPayload = record {
   starting_point : text;
   time : text;
   stops : vec text;
-  capacity : float64;
+  capacity : opt nat32;
 };
 type TrainSearchPayload = record {
   destination : text;
   starting_point : text;
   time : text;
-};
-type TrainUpdatePayload = record {
-  id : text;
-  starting_point : text;
-  time : text;
-  stops : vec text;
 };
 type Traveller = record { id : text; name : text; phone : text };
 type TravellerPayload = record { name : text; phone : text };
@@ -48,7 +41,6 @@ type _AzleResult_2 = variant { Ok : Traveller; Err : text };
 type _AzleResult_3 = variant { Ok : vec Ticket; Err : text };
 type _AzleResult_4 = variant { Ok : vec Train; Err : text };
 type _AzleResult_5 = variant { Ok : vec Traveller; Err : text };
-type _AzleResult_6 = variant { Ok : Station; Err : text };
 service : () -> {
   addTicket : (TicketPayload) -> (_AzleResult);
   addTrain : (TrainPayload) -> (_AzleResult_1);
@@ -60,7 +52,6 @@ service : () -> {
   getTrainsEmptySeats : () -> (_AzleResult_4) query;
   getTravellerById : (text) -> (_AzleResult_2) query;
   getTravellersPerTrain : (text) -> (_AzleResult_5) query;
-  initStation : (text) -> (_AzleResult_6);
   searchTrain : (TrainSearchPayload) -> (_AzleResult_4) query;
-  updateTrain : (TrainUpdatePayload) -> (_AzleResult_1);
+  updateTrain : (text, TrainPayload) -> (_AzleResult_1);
 }
