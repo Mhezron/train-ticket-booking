@@ -86,18 +86,23 @@ const travellerStorage = new StableBTreeMap<string, Traveller>(3, 44, 512);
 
 // Initialization of stationStorage
 $update;
+$update;
 export function initStation(name: string): Result<Station, string> {
   try {
     // Validate that the station has not been initialized already
     if (!stationStorage.isEmpty()) {
-      return Result.Err<Station, string>(
-        "Station has already been initialized"
-      );
+      return Result.Err<Station, string>("Station has already been initialized");
     }
 
     // Validate that the provided name is not empty
-    if (!name) {
-      return Result.Err<Station, string>("Name cannot be empty");
+    if (!name || name.trim() === "") {
+      return Result.Err<Station, string>("Station name cannot be empty");
+    }
+
+    // Validate the uniqueness of the station name
+    const existingStation = stationStorage.values()[0];
+    if (existingStation && existingStation.station.toText() === name) {
+      return Result.Err<Station, string>("Station with this name already exists");
     }
 
     // Create a new station
@@ -220,50 +225,46 @@ export function searchTrain(
 
 // Function to update train by station
 $update;
-export function updateTrain(
-  payload: TrainUpdatePayload
-): Result<Train, string> {
+$update;
+export function updateTrain(payload: TrainUpdatePayload): Result<Train, string> {
   try {
     // Validate that the station exists
     if (stationStorage.isEmpty()) {
-      return Result.Err("Station has not been initialized");
+      return Result.Err<Train, string>("Station has not been initialized");
     }
 
     // Validate that the person making the request is the station
     if (isStation(ic.caller().toText())) {
-      return Result.Err("Only the station can update a train");
+      return Result.Err<Train, string>("Only the station can update a train");
     }
 
     // Validate the payload
-    if (!payload.time || !payload.starting_point || !payload.stops) {
-      return Result.Err("Incomplete input data!");
+    if (!payload || !payload.time || !payload.starting_point || !payload.stops) {
+      return Result.Err<Train, string>("Incomplete input data!");
     }
 
     // Get the train
-    const train = trainStorage.get(payload.id);
+    const existingTrainResult = getTrainById(payload.id);
+    if (existingTrainResult.isErr()) {
+      return Result.Err<Train, string>(`Train of id: ${payload.id} not found`);
+    }
 
-    // Check if the train exists before updating
-    return match(train, {
-      Some: (train) => {
-        // Update the train
-        train.time = payload.time;
-        train.starting_point = payload.starting_point;
-        train.stops = payload.stops;
+    const existingTrain = existingTrainResult.unwrap();
 
-        // Update the train in trainStorage
-        trainStorage.insert(payload.id, train);
-        return Result.Ok<Train, string>(train);
-      },
-      None: () => {
-        return Result.Err<Train, string>(
-          `Train of id: ${payload.id} not found`
-        );
-      },
-    });
+    // Update the train
+    existingTrain.time = payload.time;
+    existingTrain.starting_point = payload.starting_point;
+    existingTrain.stops = payload.stops;
+
+    // Insert the updated train into trainStorage
+    trainStorage.insert(existingTrain.id, existingTrain);
+
+    return Result.Ok<Train, string>(existingTrain);
   } catch (error) {
-    return Result.Err("Failed to update train");
+    return Result.Err<Train, string>("Failed to update train");
   }
 }
+
 
 $update;
 // Function to add a new traveller slot
@@ -331,25 +332,62 @@ export function getTravellerById(id: string): Result<Traveller, string> {
 
 $update;
 // Function to allocate a traveller space to a client
+$update;
 export function addTicket(payload: TicketPayload): Result<Ticket, string> {
   try {
     // Validate the payload
-    if (!payload.boarding || !payload.destination) {
-      return Result.Err("Incomplete input data!");
+    if (!payload || !payload.boarding || !payload.destination) {
+      return Result.Err<Ticket, string>("Incomplete ticket information");
     }
 
-    const traveller = travellerStorage.get(payload.traveller_id);
-    const train = trainStorage.get(payload.train_id);
+    // Validate that the station exists
+    if (stationStorage.isEmpty()) {
+      return Result.Err<Ticket, string>("Station has not been initialized");
+    }
 
-    return match(train, {
-      Some: (train): Result<Ticket, string> => {
-        return match(traveller, {
-          Some: (traveller): Result<Ticket, string> => {
-            if (train.empty_seats < 1) {
-              return Result.Err<Ticket, string>(
-                `The Train is currently full, please wait or book another one`
-              );
-            }
+    // Validate that the train exists
+    const train = getTrainById(payload.train_id);
+    if (train.isErr()) {
+      return Result.Err<Ticket, string>(`Train not found for ID: ${payload.train_id}`);
+    }
+
+    // Validate that the traveler exists
+    const traveler = getTravellerById(payload.traveller_id);
+    if (traveler.isErr()) {
+      return Result.Err<Ticket, string>(`Traveler not found for ID: ${payload.traveller_id}`);
+    }
+
+    const trainInstance = train.unwrap();
+    const travelerInstance = traveler.unwrap();
+
+    if (trainInstance.empty_seats < 1) {
+      return Result.Err<Ticket, string>(`The train is currently full, please wait or book another one`);
+    }
+
+    // Create a new ticket
+    const ticket: Ticket = {
+      id: uuidv4(),
+      time: payload.time,
+      seat_no: trainInstance.capacity - trainInstance.empty_seats,
+      boarding: payload.boarding,
+      train_id: payload.train_id,
+      traveller: travelerInstance,
+      destination: payload.destination,
+    };
+
+    // Insert the ticket into ticketStorage
+    ticketStorage.insert(ticket.id, ticket);
+
+    // Update the empty seats in the train
+    trainInstance.empty_seats -= 1;
+    trainStorage.insert(trainInstance.id, trainInstance);
+
+    return Result.Ok<Ticket, string>(ticket);
+  } catch (error) {
+    return Result.Err<Ticket, string>("Failed to allocate traveler space on the train");
+  }
+}
+
             // Create a new ticket
             const ticket: Ticket = {
               id: uuidv4(),
